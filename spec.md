@@ -1,317 +1,99 @@
-Joern's Forecasting Model (JFM) — Repository Specification (MVP v0.1)
+Joern's Forecasting Model (JFM) — MVP Specification v0.1
+=======================================================
 
-Owner: Joern Stoehler
-Proposed repo: JoernStoehler/forecast
-Date: 2025-09-13
+**Owner:** Joern Stoehler  
+**Repository:** JoernStoehler/forecast  
+**Date:** 2025-09-13
 
-Purpose: Hand this document to a developer. They return a working GitHub repo that loads a minimal causal graph, runs a one‑quarter Monte‑Carlo, exports a few artifacts, and is pleasant to iterate on. Keep the scope tight.
-
-
----
-
-0) MVP Goals (what must exist after Day 1)
-
-1. A Python repo that:
-
-Parses model/current.yaml (graph + priors) and validates it against a schema.
-
-Runs one-quarter Monte‑Carlo (no time dynamics yet) to estimate P(N12: Loss_of_Control_Event) and a few node summaries.
-
-Computes one‑at‑a‑time sensitivity (±1σ) for top‑level outcome(s).
-
-Renders the DAG to a PNG/SVG from the YAML.
-
-Provides a single CLI jfm with validate, simulate, sensitivity, render subcommands.
-
-Saves outputs under runs/<timestamp>/ (JSON/CSV + image).
-
-
-
-2. A small test suite (pytest) covering: loader, validator, edge functions, and one integration test.
-
-
-3. A minimal README that lets a contributor run everything in <10 minutes.
-
-
-
-Out of scope for MVP: multi‑quarter dynamics, Sobol indices, notebooks, web UI. Add them later.
-
+**Goal:** Deliver a Python package and CLI that loads a causal graph from YAML, runs a one-quarter Monte-Carlo simulation, saves results, and is straightforward for new contributors.
 
 ---
 
-1) Repo Layout
+## 1. MVP Deliverables
 
-jfm/                            # Python package
+- `jfm` Python package with a Typer-based CLI exposing commands:
+  - `validate model/current.yaml` – schema validation.
+  - `simulate model/current.yaml` – one-quarter Monte-Carlo estimating `P(N12: Loss_of_Control_Event)` and node summaries.
+  - `sensitivity model/current.yaml` – one-at-a-time ±1σ sensitivity for top-level outcomes.
+  - `render model/current.yaml` – write DAG image (SVG/PNG).
+- Outputs stored under `runs/<timestamp>/` as JSON/CSV plus rendered graph.
+- Minimal test suite covering loader, validator, edge functions, and one integration test.
+- README enabling a new contributor to run all commands in <10 minutes.
+
+Out of scope: multi-quarter dynamics, Sobol indices, notebooks, web UI.
+
+---
+
+## 2. Repository Layout
+
+```
+jfm/
   __init__.py
-  cli.py                        # click/typer entrypoint → `jfm` CLI
+  cli.py               # Typer entrypoint for `jfm` CLI
   io/
-    loader.py                   # YAML load + normalization
-    schema.py                   # JSON Schema + validation
+    loader.py          # YAML load + normalization
+    schema.py          # JSON Schema validation
   model/
-    types.py                    # dataclasses / pydantic models
-    edges.py                    # edge functions
-    engine.py                   # one-quarter evaluator + MC sampler
-    sensitivity.py              # one-at-a-time sensitivity
-    render.py                   # graphviz rendering
+    types.py           # Pydantic models
+    edges.py           # edge functions
+    engine.py          # one-quarter evaluator + MC sampler
+    sensitivity.py     # one-at-a-time sensitivity
+    render.py          # graphviz rendering
   util/
-    stats.py                    # distributions, RNG helpers
-    log.py                      # structured logging
-
+    stats.py           # distributions, RNG helpers
+    log.py             # structured logging
 model/
-  current.yaml                  # MVG-AXR-12 (provided below)
+  current.yaml         # sample graph
   schemas/
-    graph.schema.json           # provided below
-    evidence.schema.yaml        # provided below
-
+    graph.schema.json
+    evidence.schema.yaml
 forecasts/
-  ledger.csv                    # header only (columns spec below)
-
-runs/                           # gitignored; CLI writes outputs here
-
-refs/                           # empty for MVP
+  ledger.csv           # headers only
+runs/                  # gitignored output directory
+refs/
   README.md
-
-scripts/                        # optional helper scripts (empty OK)
-
+scripts/               # optional helper scripts
 tests/
   test_loader.py
   test_edges.py
   test_engine_integration.py
-
 README.md
 CHANGELOG.md
-pyproject.toml                   # pinned deps & tooling
+pyproject.toml         # pinned deps & tooling
 .pre-commit-config.yaml
 LICENSE
-
-
----
-
-2) Tooling & Environment
-
-Python: 3.11.x
-
-Dependencies (pin exact versions in pyproject.toml):
-
-pydantic>=2,<3 (models/validation) or dataclasses + jsonschema (choose one approach; see below)
-
-jsonschema>=4,<5 (YAML validation)
-
-pyyaml>=6,<7
-
-numpy>=1.26,<3 and scipy>=1.13,<2
-
-click>=8,<9 or typer>=0.12,<0.13 (CLI)
-
-graphviz>=0.20,<0.21 (Python bindings; require Graphviz system pkg)
-
-pytest>=8,<9
-
-
-Dev tools: ruff, black, pre-commit hook running both.
-
-CI: GitHub Actions: Python 3.11 matrix, install, lint, test, and run jfm simulate on the sample to ensure repo is healthy.
-
-
-Implementation choice: Prefer pydantic v2 for strong validation and helpful errors.
-
+```
 
 ---
 
-3) Data Model (MVP semantics)
+## 3. Dependencies & Tooling
 
-3.1 Node Types
-
-state ∈ [0,1] unless unit specified.
-
-rate has units (e.g., incidents per 1000 deployments); prior typically lognormal.
-
-event represented by a probability p ∈ [0,1] within the time window.
-
-policy treated as state for math; semantic tag only.
-
-resource may be unbounded positive; use lognormal prior.
-
-
-3.2 Edge Functions (must implement)
-
-All edge functions map source value(s) to a contribution that the target’s aggregator uses.
-
-logistic: f(x; w, b) = sigmoid(w*x + b) where sigmoid(z)=1/(1+exp(-z)). Inputs assumed scaled to [0,1] unless the node’s unit dictates otherwise; developer should implement automatic scaling for [0,1] sources and unit‑aware passthrough otherwise.
-
-inhibitory_logistic: same as logistic but intended for negative influence; w is typically negative and enforced by validation.
-
-multiplicative (for rate targets): Given baseline v0 from the target’s prior and a source x, apply v = v0 * (1 + α*x); for multiple sources, multiply successive factors.
-
-noisy_or (for event targets): With k inputs providing per‑path probabilities p_i, and a leak p_leak, p = 1 - (1 - p_leak) * Π_i (1 - p_i).
-
-gate_max (policy gate on resource targets): With gate value g ∈ [0,1], compute a multiplier m = min_multiplier + (max_multiplier - min_multiplier)*(1 - g). Apply to the post‑prior value of the target (or to the upstream contribution as appropriate) so higher g reduces availability.
-
-gate_min (risk‑reducer on event targets): With capacity c ∈ [0,1] and risk_multiplier ∈ (0,1], adjust event probability p ← p * (1 - (1 - risk_multiplier)*c).
-
-
-3.3 Target Aggregators (MVP)
-
-For state targets with logistic‑type inbound edges: sum contributions then clamp01. (Simple and transparent.)
-
-For rate targets: apply chained multiplicative adjustments to the prior draw.
-
-For event targets: use noisy_or across inbound event‑like contributions, then apply any gate_min effects.
-
-
-> Note: This is deliberately simple for MVP. We can swap in better aggregators (e.g., softmax, 1−Π(1−s_i) for states) after first sensitivity pass.
-
-
-
+- Python 3.11.x
+- `pydantic>=2,<3`
+- `jsonschema>=4,<5`
+- `pyyaml>=6,<7`
+- `numpy>=1.26,<3`
+- `scipy>=1.13,<2`
+- `typer>=0.12,<0.13`
+- `graphviz>=0.20,<0.21` (requires system Graphviz)
+- `pytest>=8,<9`
+- Dev: `ruff` and `black` via `pre-commit`
+- Use `python -m venv .venv` and `pip install -e .` for local setup.
+- CI: GitHub Actions on Python 3.11 running lint, tests, and `jfm simulate model/current.yaml`.
 
 ---
 
-4) Monte‑Carlo & Sensitivity (MVP)
+## 4. Data Model
 
-Draws: Default 100,000 (configurable via CLI).
+YAML input is validated against `model/schemas/graph.schema.json`. Nodes capture priors and metadata; edges define functional relationships; justifications document assumptions. `forecasts/ledger.csv` tracks forecast questions with columns:
 
-Sampling: Use numpy.random.Generator(PCG64); allow --seed for reproducibility.
-
-Priors:
-
-Beta(a,b) on [0,1].
-
-LogNormal(mu, sigma) where parameters are for the log (natural log).
-
-Normal(mu, sigma) as needed (clip or transform if mapping into [0,1]).
-
-
-Evaluation: For each draw, sample node priors, propagate edges once (single quarter), compute p(N12).
-
-Outputs:
-
-summary.json: mean/median/std for all nodes; P(N12); seed and config hash.
-
-samples_parquet (optional later) — skip for MVP; CSV is enough.
-
-
-Sensitivity (OAT): Perturb each top‑level parameter (edge weights and key node priors) by ±1σ (or ±10% for parameters without σ), recompute P(N12), record delta.
-
-
+`qid,question,open_date,close_date,p,resolution_rule,primary_sources,top_drivers,rationale_stub,last_updated`
 
 ---
 
-5) CLI Spec
+## 5. Sample Graph (`model/current.yaml`)
 
-# Validate YAML against schema and basic semantics
-jfm validate --config model/current.yaml
-
-# Run one-quarter MC and write results under runs/<timestamp>/
-jfm simulate --config model/current.yaml --runs 100000 --seed 42
-
-# One-at-a-time sensitivity report (CSV)
-jfm sensitivity --config model/current.yaml --runs 20000 --seed 43
-
-# Render graph to SVG/PNG using Graphviz
-jfm render --config model/current.yaml --out runs/<timestamp>/graph.svg
-
-CLI returns non‑zero exit codes on validation or run failures.
-
-
----
-
-6) Graph Rendering (minimal)
-
-Use graphviz.Digraph.
-
-Node label: name\n(type); color code by type (pastel palette, consistent; exact colors not critical).
-
-Edge label: function (short) and key params.
-
-Save as graph.svg and graph.png.
-
-
-
----
-
-7) Schema Files (include in repo)
-
-7.1 model/schemas/graph.schema.json
-
-{
-  "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "title": "JFM Graph Schema",
-  "type": "object",
-  "required": ["meta", "nodes", "edges"],
-  "properties": {
-    "meta": {
-      "type": "object",
-      "required": ["id", "version", "timestep"],
-      "properties": {
-        "id": {"type": "string"},
-        "version": {"type": "string"},
-        "timestep": {"enum": ["quarter"]}
-      }
-    },
-    "nodes": {
-      "type": "array",
-      "items": {
-        "type": "object",
-        "required": ["id", "name", "type"],
-        "properties": {
-          "id": {"type": "string"},
-          "name": {"type": "string"},
-          "type": {"enum": ["state", "rate", "event", "policy", "resource"]},
-          "unit": {"type": "string"},
-          "range": {"type": "array", "items": {"type": "number"}, "minItems": 2, "maxItems": 2},
-          "prior": {"type": "object"},
-          "window": {"type": "string"}
-        }
-      }
-    },
-    "edges": {
-      "type": "array",
-      "items": {
-        "type": "object",
-        "required": ["target", "function"],
-        "properties": {
-          "source": {"type": "string"},
-          "sources": {"type": "array", "items": {"type": "string"}},
-          "target": {"type": "string"},
-          "function": {"enum": ["logistic", "inhibitory_logistic", "multiplicative", "noisy_or", "gate_max", "gate_min"]},
-          "params": {"type": "object"},
-          "justification": {"type": "string"}
-        },
-        "oneOf": [
-          {"required": ["source"]},
-          {"required": ["sources"]}
-        ]
-      }
-    },
-    "justifications": {"type": "object"}
-  }
-}
-
-7.2 model/schemas/evidence.schema.yaml
-
-$schema: "https://json-schema.org/draft/2020-12/schema"
-title: JFM Evidence Card
- type: object
- required: [id, claim, direction, strength]
- properties:
-  id: { type: string }
-  claim: { type: string }
-  direction: { enum: ["+", "-", "mixed"] }
-  strength: { enum: [VeryLow, Low, Medium, High] }
-  sources: { type: array, items: { type: string } }
-  applicability: { type: string }
-  update_rule: { type: string }
-  adversarial_checks: { type: string }
-
-7.3 forecasts/ledger.csv (columns only)
-
-qid,question,open_date,close_date,p,resolution_rule,primary_sources,top_drivers,rationale_stub,last_updated
-
-
----
-
-8) Sample Graph (model/current.yaml)
-
+```
 meta:
   id: MVG-AXR-12
   version: 0.1
@@ -354,74 +136,51 @@ justifications:
   J8: "Either prevalent deception or severe incidents can precipitate loss-of-control."
   J9: "Incidents move public salience, which drives governance stringency (lagged)."
   J10: "Emergency levers (audit, shutdown, rollback) reduce realized catastrophe."
-
-
----
-
-9) Tests (minimum set)
-
-Loader/Schema: invalid/missing fields raise clear errors; valid file passes.
-
-Edge functions: property tests (e.g., higher x increases logistic output; gate_min never increases risk beyond baseline).
-
-Engine integration: simulate on current.yaml returns a probability in [0,1] and writes summary.json.
-
-
+```
 
 ---
 
-10) README Requirements (short)
+## 6. Testing
 
-Setup (pyenv/uv/pip; Graphviz install note).
-
-Commands (the four CLI examples above).
-
-Where outputs go, and how to read summary.json.
-
-Contributing: style (ruff+black), tests, PR checklist.
-
-
+- Loader and schema validation raise clear errors for invalid files; valid files pass.
+- Edge functions include property tests (e.g., logistic output increases with input; `gate_min` never increases risk).
+- Integration test confirms `jfm simulate model/current.yaml` returns a probability in [0,1] and writes `summary.json`.
+- Run tests with `pytest`.
 
 ---
 
-11) License & Credits
+## 7. README Requirements
 
-License: MIT (unless the owner specifies otherwise).
-
-NOTICE: This repository models high‑level risk pathways only. It must not include operational instructions for misuse or harm.
-
-
-
----
-
-12) Backlog (after MVP)
-
-Multi‑quarter dynamics (DID, quarter‑lag feedback).
-
-Global sensitivity (Sobol) via SALib.
-
-Jupyter notebooks for exploratory runs.
-
-Evidence card ingestion + parameter update rules.
-
-Forecast ledger operations (open/close questions, scoring).
-
-Simple static site docs via MkDocs.
-
-
+- Setup using `python -m venv .venv` and `pip install -e .`.
+- Note system Graphviz dependency.
+- Examples for `validate`, `simulate`, `sensitivity`, and `render` commands.
+- Explain output files under `runs/<timestamp>/`.
+- Contribution guidelines: run `pre-commit run --files <files>` and `pytest` before committing.
 
 ---
 
-13) Acceptance Checklist (what the developer delivers)
+## 8. License & Notice
 
-[ ] jfm CLI with validate | simulate | sensitivity | render commands working against model/current.yaml.
+- License: MIT (unless owner specifies otherwise).
+- Notice: repository models high-level risk pathways only and must not include operational misuse instructions.
 
-[ ] runs/<timestamp>/summary.json containing: seed, runs, P(N12), and basic node summaries.
+---
 
-[ ] runs/<timestamp>/graph.svg renders without errors.
+## 9. Backlog (post-MVP)
 
-[ ] Unit + integration tests pass in CI on Python 3.11.
+- Multi-quarter dynamics with lagged feedback.
+- Global sensitivity (Sobol) via SALib.
+- Jupyter notebooks for exploratory runs.
+- Evidence card ingestion and parameter update rules.
+- Forecast ledger operations (open/close questions, scoring).
+- Static site docs via MkDocs.
 
-[ ] README explains setup and one successful run end‑to‑end.
+---
 
+## 10. Delivery Checklist
 
+- [ ] `jfm` CLI with `validate`, `simulate`, `sensitivity`, `render` commands works on `model/current.yaml`.
+- [ ] `runs/<timestamp>/summary.json` contains seed, runs, `P(N12)`, and node summaries.
+- [ ] `runs/<timestamp>/graph.svg` renders without errors.
+- [ ] `pytest` tests pass in CI on Python 3.11.
+- [ ] `README` demonstrates end-to-end run.
