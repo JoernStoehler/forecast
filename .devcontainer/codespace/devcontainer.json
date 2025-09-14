@@ -1,0 +1,23 @@
+{
+  // We avoid Dev Container "features" due to frequent slowness/breakage.
+  // Instead we rely on the pre-cached Universal image in Codespaces.
+  // Using a commented image hint keeps the default fast path:
+  // "image": "mcr.microsoft.com/devcontainers/universal:2",
+  "name": "forecast (Codespaces)",
+  "workspaceFolder": "/workspaces/forecast",
+  "postCreateCommand": "./.devcontainer/codespace/post-create.sh",
+  "postStartCommand": "./.devcontainer/codespace/post-start.sh",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "ms-python.python",
+        "ms-python.vscode-pylance",
+        "ms-toolsai.jupyter",
+        "charliermarsh.ruff",
+        "dbaeumer.vscode-eslint",
+        "esbenp.prettier-vscode"
+      ]
+    }
+  },
+  "remoteUser": "codespace"
+}

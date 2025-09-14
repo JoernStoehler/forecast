@@ -1,0 +1,33 @@
+{
+  "name": "forecast (Local)",
+  "image": "mcr.microsoft.com/devcontainers/universal:2",
+  "workspaceFolder": "/workspaces/forecast",
+  "mounts": [
+    "source=gh_auth,target=/home/codespace/.config/gh,type=volume",
+    "source=codex_auth,target=/home/codespace/.codex,type=volume",
+    "source=bash_history_data,target=/home/codespace/.bash_history_dir,type=volume",
+    "source=npm_cache,target=/home/codespace/.npm,type=volume"
+  ],
+  "postCreateCommand": "./.devcontainer/local/post-create.sh",
+  "postStartCommand": "./.devcontainer/local/post-start.sh",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "ms-python.python",
+        "ms-python.vscode-pylance",
+        "ms-toolsai.jupyter",
+        "charliermarsh.ruff",
+        "dbaeumer.vscode-eslint",
+        "esbenp.prettier-vscode",
+        "usernamehw.errorlens",
+        "PKief.material-icon-theme",
+        "onecrayon.theme-quietlight-vsc",
+        "openai.chatgpt",
+        "tamasfe.even-better-toml",
+        "redhat.vscode-yaml",
+        "vitest.explorer"
+      ]
+    }
+  },
+  "remoteUser": "codespace"
+}

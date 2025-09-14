@@ -1,0 +1,55 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  python:
+    name: Python (jfm)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install uv
+        run: |
+          curl -fsSL https://astral.sh/uv/install.sh | sh -s -- -y
+      - name: Sync workspace deps
+        run: |
+          ~/.local/bin/uv --version
+          ~/.local/bin/uv sync
+      - name: Lint (ruff)
+        run: |
+          ~/.local/bin/uvx ruff format --check .
+          ~/.local/bin/uvx ruff check .
+      - name: Type-check (pyright)
+        run: ~/.local/bin/uvx pyright -p pyrightconfig.json
+      - name: Run tests
+        run: ~/.local/bin/uv run -m pytest -q
+
+  frontend:
+    name: Frontend
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Enable corepack
+        run: corepack enable
+      - name: Install deps (pnpm)
+        run: pnpm -C frontend install --frozen-lockfile
+      - name: Lint (eslint)
+        run: pnpm -C frontend lint
+      - name: Type-check (tsc)
+        run: pnpm -C frontend typecheck
+      - name: Run tests (vitest)
+        run: pnpm -C frontend test --silent

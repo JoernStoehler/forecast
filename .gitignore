@@ -1,0 +1,44 @@
+# General
+.DS_Store
+Thumbs.db
+*.log
+*.tmp
+*.swp
+*.swo
+*.orig
+.env
+.venv/
+.python-version
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+coverage.xml
+site/
+dist/
+build/
+pip-wheel-metadata/
+
+# Node / Frontend
+node_modules/
+frontend/node_modules/
+frontend/dist/
+frontend/.vite/
+frontend/.eslintcache
+.pnpm-store/
+
+# Editors
+.vscode/
+.idea/
+
+# OS / Misc
+*.coverage
+*.seed
+*.out
+

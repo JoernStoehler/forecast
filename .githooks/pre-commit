@@ -1,0 +1,21 @@
+#!/usr/bin/env bash
+# Lightweight pre-commit to mirror CI quickly. Skippable with `--no-verify` or SKIP_HOOKS=1
+set -euo pipefail
+
+if [[ "${SKIP_HOOKS:-}" == "1" ]]; then
+  echo "[hooks] pre-commit skipped (SKIP_HOOKS=1)"
+  exit 0
+fi
+
+echo "[hooks] ruff format check"
+~/.local/bin/uvx ruff format --check .
+
+echo "[hooks] ruff lint"
+~/.local/bin/uvx ruff check .
+
+if [[ -f frontend/package.json ]]; then
+  echo "[hooks] frontend eslint"
+  pnpm -C frontend lint
+fi
+
+echo "[hooks] OK"
