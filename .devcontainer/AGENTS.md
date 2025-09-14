@@ -46,7 +46,7 @@ What we explicitly avoid
 - Tests: `pytest`
 - Lint: `ruff check .`
 - Type-check: `pyright`
-- Frontend: `pnpm -C frontend install` then `pnpm -C frontend dev`
+- Frontend: `pnpm --dir frontend install` then `pnpm --dir frontend dev`
 - Codex CLI: `codex --help` (installed globally via npm)
 
 ## Constraints and Practices

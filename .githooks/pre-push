@@ -8,18 +8,18 @@ if [[ "${SKIP_HOOKS:-}" == "1" ]]; then
 fi
 
 echo "[hooks] pyright type-check"
-~/.local/bin/uvx pyright -p pyrightconfig.json
+uvx pyright -p pyrightconfig.json
 
 echo "[hooks] pytest"
 # Ensure Python dev dependencies (incl. pytest) are synced
-~/.local/bin/uv sync --extra dev >/dev/null 2>&1 || ~/.local/bin/uv sync --extra dev
-~/.local/bin/uv run -m pytest -q
+uv sync --extra dev >/dev/null 2>&1 || uv sync --extra dev
+uv run -m pytest -q
 
 if [[ -f frontend/package.json ]]; then
   echo "[hooks] frontend type-check"
-  pnpm -C frontend tsc --noEmit
+  pnpm --dir frontend typecheck
   echo "[hooks] frontend tests"
-  pnpm -C frontend test --silent
+  pnpm --dir frontend test --silent
 fi
 
 echo "[hooks] OK"

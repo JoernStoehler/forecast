@@ -8,14 +8,14 @@ if [[ "${SKIP_HOOKS:-}" == "1" ]]; then
 fi
 
 echo "[hooks] ruff format check"
-~/.local/bin/uvx ruff format --check .
+uvx ruff format --check .
 
 echo "[hooks] ruff lint"
-~/.local/bin/uvx ruff check .
+uvx ruff check .
 
 if [[ -f frontend/package.json ]]; then
   echo "[hooks] frontend eslint"
-  pnpm -C frontend lint
+  pnpm --dir frontend lint
 fi
 
 echo "[hooks] OK"

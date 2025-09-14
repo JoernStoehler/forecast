@@ -16,7 +16,7 @@ fi
 
 # Frontend deps if present
 if [ -f "$WORKSPACE/frontend/package.json" ]; then
-  pnpm -C "$WORKSPACE/frontend" install --frozen-lockfile || say "pnpm install failed (non-fatal)"
+  pnpm --dir "$WORKSPACE/frontend" install --frozen-lockfile || say "pnpm install failed (non-fatal)"
 fi
 
 say "Done"

@@ -46,10 +46,10 @@ jobs:
       - name: Enable corepack
         run: corepack enable
       - name: Install deps (pnpm)
-        run: pnpm -C frontend install --frozen-lockfile
+        run: pnpm --dir frontend install --frozen-lockfile
       - name: Lint (eslint)
-        run: pnpm -C frontend lint
+        run: pnpm --dir frontend lint
       - name: Type-check (tsc)
-        run: pnpm -C frontend typecheck
+        run: pnpm --dir frontend typecheck
       - name: Run tests (vitest)
-        run: pnpm -C frontend test --silent
+        run: pnpm --dir frontend test --silent

@@ -20,7 +20,7 @@ fi
 # Frontend deps if present (prefer pnpm)
 if [ -f "$WORKSPACE/frontend/package.json" ]; then
   if command -v pnpm >/dev/null 2>&1; then
-    pnpm -C "$WORKSPACE/frontend" install --frozen-lockfile || say "pnpm install failed (non-fatal)"
+    pnpm --dir "$WORKSPACE/frontend" install --frozen-lockfile || say "pnpm install failed (non-fatal)"
   elif command -v npm >/dev/null 2>&1; then
     npm ci --prefix "$WORKSPACE/frontend" || say "npm ci failed (non-fatal)"
   fi
