@@ -6,8 +6,8 @@ export default [
   // Ignore build output
   { ignores: ["dist/**"] },
   {
-    files: ["**/*.{ts,tsx,js,jsx}"]
-    ,languageOptions: {
+    files: ["**/*.{ts,tsx,js,jsx}"],
+    languageOptions: {
       parser: tsParser,
       ecmaVersion: "latest",
       sourceType: "module",
@@ -20,5 +20,20 @@ export default [
       ...tseslint.configs.recommended.rules,
     },
   },
+  // Test files: allow common test globals without extra deps
+  {
+    files: ["tests/**/*.{ts,tsx,js,jsx}", "**/*.test.{ts,tsx,js,jsx}"],
+    languageOptions: {
+      globals: {
+        describe: "readonly",
+        it: "readonly",
+        test: "readonly",
+        expect: "readonly",
+        beforeAll: "readonly",
+        afterAll: "readonly",
+        beforeEach: "readonly",
+        afterEach: "readonly",
+      },
+    },
+  },
 ];
-
