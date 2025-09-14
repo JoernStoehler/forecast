@@ -11,6 +11,8 @@ echo "[hooks] pyright type-check"
 ~/.local/bin/uvx pyright -p pyrightconfig.json
 
 echo "[hooks] pytest"
+# Ensure Python dev dependencies (incl. pytest) are synced
+~/.local/bin/uv sync --extra dev >/dev/null 2>&1 || ~/.local/bin/uv sync --extra dev
 ~/.local/bin/uv run -m pytest -q
 
 if [[ -f frontend/package.json ]]; then

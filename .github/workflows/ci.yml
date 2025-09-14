@@ -22,10 +22,10 @@ jobs:
       - name: Install uv
         run: |
           curl -fsSL https://astral.sh/uv/install.sh | sh -s -- -y
-      - name: Sync workspace deps
+      - name: Sync workspace deps (incl. dev)
         run: |
           ~/.local/bin/uv --version
-          ~/.local/bin/uv sync
+          ~/.local/bin/uv sync --extra dev
       - name: Lint (ruff)
         run: |
           ~/.local/bin/uvx ruff format --check .
